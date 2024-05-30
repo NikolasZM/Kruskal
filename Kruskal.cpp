@@ -1,96 +1,124 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <set>
+#include <map>
+
 using namespace std;
 
-class arista {
+class Arista {
 public:
-	int v;
-	char nodos[2];
+    int costo;
+    char nodos[2];
 
-	arista(char a, char b, int va) {
-		v = va;
-		nodos[0] = a;
-		nodos[1] = b;
-	}
+    Arista(char a, char b, int c) {
+        costo = c;
+        nodos[0] = a;
+        nodos[1] = b;
+    }
 
+    bool operator<(const Arista& other) const {
+        return costo < other.costo;
+    }
 };
-
 
 class Grafo {
 public:
-	vector<arista> aristas;
-	vector<char> nodos;
-	Grafo() {}
-	void setAristas(char a, char b, int val) {
-		arista tmp(a, b, val);
-		aristas.push_back(tmp);
-	}
+    vector<Arista> aristas;
+    vector<char> nodos;
 
-	void setNodo(char val) {
-		nodos.push_back(val);
-	}
+    Grafo() {}
+
+    void agregarArista(char a, char b, int costo) {
+        Arista tmp(a, b, costo);
+        aristas.push_back(tmp);
+    }
+
+    void agregarNodo(char nodo) {
+        nodos.push_back(nodo);
+    }
 };
 
-void kruskal(Grafo GG) {
-	vector<arista> G;
-	vector<arista> S;
-	vector<int> valores;
-	vector<int> indices;
-	for (int i{ 0 }; i < GG.aristas.size(); i++) {
-		valores.push_back(GG.aristas[i].v);
-		indices.push_back(i);
-	}
-	
-	for (int i{ 0 }; i < valores.size(); i++) {
-		cout << valores[i] << " ";
-	}
-	cout << endl;
-	
-	sort(indices.begin(), indices.end(), [&](int a, int b) {
-		return valores[a] < valores[b];
-		});
-
-	vector<int> valoresOrd(valores.size());
-
-	for (int i{ 0 }; i < GG.aristas.size(); i++) {
-		valoresOrd[i] = valores[indices[i]];
-	}
-
-	for (int i{ 0 }; i < valores.size(); i++) {
-		cout << valoresOrd[i] << " ";
-	}
+char encontrarRepresentante(map<char, char>& padre, char i) {
+    if (padre[i] == i)
+        return i;
+    return encontrarRepresentante(padre, padre[i]);
 }
 
+void unirConjuntos(map<char, char>& padre, map<char, int>& rango, char x, char y) {
+    char raizX = encontrarRepresentante(padre, x);
+    char raizY = encontrarRepresentante(padre, y);
+
+    if (rango[raizX] < rango[raizY])
+        padre[raizX] = raizY;
+    else if (rango[raizX] > rango[raizY])
+        padre[raizY] = raizX;
+    else {
+        padre[raizY] = raizX;
+        rango[raizX]++;
+    }
+}
+
+set<Arista> Kruskal(Grafo& G) {
+    set<Arista> conjuntoAristas(G.aristas.begin(), G.aristas.end());
+    set<Arista> solucion;
+
+    map<char, char> padre;
+    map<char, int> rango;
+
+    for (char nodo : G.nodos) {
+        padre[nodo] = nodo;
+        rango[nodo] = 0;
+    }
+
+    while (!conjuntoAristas.empty() && solucion.size() != G.nodos.size() - 1) {
+        Arista aristaActual = *conjuntoAristas.begin();
+        conjuntoAristas.erase(conjuntoAristas.begin());
+
+        char u = aristaActual.nodos[0];
+        char v = aristaActual.nodos[1];
+
+        char conjuntoU = encontrarRepresentante(padre, u);
+        char conjuntoV = encontrarRepresentante(padre, v);
+
+        if (conjuntoU != conjuntoV) {
+            solucion.insert(aristaActual);
+            unirConjuntos(padre, rango, conjuntoU, conjuntoV);
+        }
+    }
+
+    if (solucion.size() == G.nodos.size() - 1)
+        return solucion;
+    else
+        return {};
+}
 
 int main() {
-	int val[15] = { 4,5,7,6,8,12,3,9,7,4,5,5,11,10,6 };
-	Grafo G;
-	
-	for (int i{ 97 }; i < 106; i++) {
-		char tmp = i;
-		G.setNodo(tmp);
-	}
-	G.setAristas('a','b',5);
-	G.setAristas('b', 'c', 4);
-	G.setAristas('b', 'd', 6);
-	G.setAristas('a', 'd', 7);
-	G.setAristas('c', 'd', 8);
-	G.setAristas('d', 'e', 3);
-	G.setAristas('d', 'g', 4);
-	G.setAristas('c', 'f', 9);
-	G.setAristas('a', 'h', 12);
-	G.setAristas('f', 'g', 7);
-	G.setAristas('f', 'i', 10);
-	G.setAristas('g', 'i', 6);
-	G.setAristas('g', 'h', 5);
-	G.setAristas('i', 'h', 11);
-	G.setAristas('e', 'h', 5);
+    Grafo G;
+    G.agregarNodo('A');
+    G.agregarNodo('B');
+    G.agregarNodo('C');
+    G.agregarNodo('D');
+    G.agregarNodo('E');
 
+    G.agregarArista('A', 'B', 1);
+    G.agregarArista('A', 'C', 3);
+    G.agregarArista('B', 'C', 1);
+    G.agregarArista('B', 'D', 4);
+    G.agregarArista('C', 'D', 2);
+    G.agregarArista('D', 'E', 5);
+    G.agregarArista('C', 'E', 3);
 
-	kruskal(G);
-	cout << endl;
+    set<Arista> mst = Kruskal(G);
+    if (!mst.empty()) {
+        cout << "Aristas en el T:" << endl;
+        for (const Arista& a : mst) {
+            cout << a.nodos[0] << " - " << a.nodos[1] << " : " << a.costo << endl;
+        }
+    }
+    else {
+        cout << "No hay solución" << endl;
+    }
 
-
-	
+    return 0;
 }
